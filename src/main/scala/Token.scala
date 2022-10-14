@@ -1,6 +1,4 @@
-case class Token(typ: TokenType, lexeme: String, literal: Any, line: Int):
-  override def toString(): String =
-    s"$typ $lexeme $literal"
+case class Token(typ: TokenType, lexeme: String, literal: Any, line: Int)
 
 enum TokenType:
   case 
