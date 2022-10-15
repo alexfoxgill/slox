@@ -1,6 +1,6 @@
-import scala.collection.mutable.ArrayBuffer
-
 import TokenType._
+
+import scala.collection.mutable.ArrayBuffer
 
 enum Expr:
   case Literal(value: Any)
@@ -38,7 +38,7 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
     catch
       case _: ParseError =>
         synchronize()
-        null
+        Stmt.Empty
 
   private def varDeclaration(): Stmt =
     val name = consume(Identifier, "Expected variable name")

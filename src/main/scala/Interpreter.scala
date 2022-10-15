@@ -45,7 +45,7 @@ class Interpreter(lox: Lox):
 
       case Stmt.Print(expr) =>
         val value = evaluate(expr)
-        println(value)
+        lox.print(stringify(value))
 
       case Stmt.Var(name, initializer) =>
         val value: Any = initializer.map(evaluate).getOrElse(Nada)
@@ -111,6 +111,12 @@ class Interpreter(lox: Lox):
         (isTruthy(l), operator.typ) match
           case (true, TokenType.And) | (false, TokenType.Or) => evaluate(right)
           case _                                             => l
+
+  private def stringify(value: Any): String =
+    value match
+      case Nada      => "nil"
+      case x: Double => x.toString.stripSuffix(".0")
+      case _         => value.toString
 
   private def isTruthy(obj: Any) =
     obj != Nada && obj != false
