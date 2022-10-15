@@ -13,7 +13,7 @@ class Scanner(source: String):
       start = current
       scanToken()
 
-    tokens += new Token(EOF, "", null, line)
+    tokens += new Token(EOF, "", None, line)
     tokens.toList
 
   private def isAtEnd = current >= source.length
@@ -66,7 +66,7 @@ class Scanner(source: String):
       while peek.isDigit do advance()
     }
 
-    addToken(Number, source.substring(start, current).toDouble)
+    addToken(Number, Some(source.substring(start, current).toDouble))
 
   private def string() =
     while peek != '"' && !isAtEnd do
@@ -81,7 +81,7 @@ class Scanner(source: String):
       advance()
 
       val value = source.substring(start + 1, current - 1)
-      addToken(String, value)
+      addToken(String, Some(value))
 
   private def peek = if isAtEnd then '\u0000' else source.charAt(current)
   private def peekNext = if current + 1 >= source.length then '\u0000' else source.charAt(current + 1)
@@ -99,7 +99,7 @@ class Scanner(source: String):
     current += 1
     c
 
-  private def addToken(token: TokenType, literal: Any = null) =
+  private def addToken(token: TokenType, literal: Option[Any] = None) =
     val text = source.substring(start, current)
     tokens += new Token(token, text, literal, line)
 

@@ -1,4 +1,5 @@
-case class Token(typ: TokenType, lexeme: String, literal: Any, line: Int)
+case class Token(typ: TokenType, lexeme: String, literal: Option[Any], line: Int):
+  def getValue: Any = literal.getOrElse(Nada)
 
 enum TokenType:
   case 

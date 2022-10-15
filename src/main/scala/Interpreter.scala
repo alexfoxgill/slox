@@ -1,5 +1,7 @@
 import scala.collection.mutable.HashMap
 
+object Nada
+
 class Environment(enclosing: Option[Environment] = None):
   private val values = HashMap.empty[String, Any]
 
@@ -32,6 +34,9 @@ class Interpreter:
 
   private def execute(stmt: Stmt): Unit =
     stmt match
+      case Stmt.Empty =>
+        ()
+        
       case Stmt.Expression(expr) =>
         evaluate(expr)
         ()
@@ -41,7 +46,7 @@ class Interpreter:
         println(value)
 
       case Stmt.Var(name, initializer) =>
-        val value: Any = if initializer != null then evaluate(initializer) else null
+        val value: Any = initializer.map(evaluate).getOrElse(Nada)
         environment.define(name.lexeme, value)
 
       case Stmt.Block(statements) =>
@@ -52,6 +57,15 @@ class Interpreter:
         finally
           environment = prevEnv
 
+      case Stmt.If(condition, thenBranch, elseBranch) =>
+        if isTruthy(evaluate(condition)) then
+          execute(thenBranch)
+        else
+          elseBranch.foreach(execute)
+
+      case Stmt.While(condition, body) =>
+        while isTruthy(evaluate(condition)) do
+          execute(body)
 
   private def evaluate(expr: Expr): Any =
     expr match
@@ -81,15 +95,18 @@ class Interpreter:
           case (l: Double, TokenType.GreaterEqual, r: Double) => l >= r
           case (l: Double, TokenType.Less, r: Double)         => l < r
           case (l: Double, TokenType.LessEqual, r: Double)    => l <= r
-          case (l, TokenType.BangEqual, r)                    => !isEqual(l ,r)
-          case (l, TokenType.EqualEqual, r)                   => isEqual(l, r)
+          case (l, TokenType.BangEqual, r)                    => !l.equals(r)
+          case (l, TokenType.EqualEqual, r)                   => l.equals(r)
 
           case (l, _, r) => throw new RuntimeError(operator, s"Can't evaluate $l ${operator.lexeme} $r")
+
+      case Expr.Logical(left, operator, right) =>
+        val l = evaluate(left)
+        (isTruthy(l), operator.typ) match
+          case (true, TokenType.And) | (false, TokenType.Or) => evaluate(right)
+          case _ => l
         
   private def isTruthy(obj: Any) =
-    obj != null && obj != false
-
-  private def isEqual(a: Any, b: Any) =
-    (a == null && b == null) || (a != null && a.equals(b))
+    obj != Nada && obj != false
 
 class RuntimeError(val token: Token, message: String) extends RuntimeException(message)

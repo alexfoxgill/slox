@@ -5,16 +5,23 @@ import TokenType._
 enum Expr:
   case Literal(value: Any)
   case Binary(left: Expr, operator: Token, right: Expr)
+  case Logical(left: Expr, operator: Token, right: Expr)
   case Unary(operator: Token, right: Expr)
   case Grouping(expr: Expr)
   case Var(name: Token)
   case Assign(name: Token, value: Expr)
   
 enum Stmt:
+  case Empty
   case Expression(expr: Expr)
   case Print(expr: Expr)
-  case Var(name: Token, initializer: Expr)
+  case Var(name: Token, initializer: Option[Expr])
   case Block(statements: List[Stmt])
+  case If(condition: Expr, thenBranch: Stmt, elseBranch: Option[Stmt])
+  case While(condition: Expr, body: Stmt)
+
+object Stmt:
+  def block(statements: Stmt*): Block = new Block(statements.toList)
 
 class Parser(tokens: IndexedSeq[Token]) {
   private var current = 0
@@ -36,17 +43,49 @@ class Parser(tokens: IndexedSeq[Token]) {
 
   private def varDeclaration(): Stmt =
     val name = consume(Identifier, "Expected variable name")
-    var initializer: Expr = null
-    if matches(Equal) then
-      initializer = expression()
-    
+    val init = if matches(Equal) then Some(expression()) else None
     consume(Semicolon, "Expected ';' after variable declaration")
-    Stmt.Var(name, initializer)
+    Stmt.Var(name, init)
 
   private def statement(): Stmt =
     if matches(Print) then printStatement()
+    else if matches(If) then ifStatement()
+    else if matches(While) then whileStatement()
+    else if matches(For) then forStatement()
     else if matches(LeftBrace) then block()
     else expressionStatement()
+
+  private def forStatement(): Stmt =
+    consume(LeftParen, "Expected '(' after 'for'")
+    val initializer: Stmt =
+      if matches(Semicolon) then Stmt.Empty
+      else if matches(Var) then varDeclaration()
+      else expressionStatement()
+    val condition = if !check(Semicolon) then expression() else Expr.Literal(true)
+    consume(Semicolon, "Expected ';' after for loop condition")
+    val increment: Stmt = Stmt.Expression(if !check(RightParen) then expression() else Expr.Literal(Nada))
+    consume(RightParen, "Expected ')' after for loop clauses")
+    val body = statement()
+    
+    Stmt.block(
+      initializer,
+      Stmt.While(condition, Stmt.block(body, increment))
+    )
+
+  private def whileStatement(): Stmt =
+    consume(LeftParen, "Expected '(' after 'while'")
+    val condition = expression()
+    consume(RightParen, "Expected ')' after while loop condition")
+    val body = statement()
+    Stmt.While(condition, body)
+
+  private def ifStatement(): Stmt =
+    consume(LeftParen, "Expected '(' after 'if'")
+    val condition = expression()
+    consume(RightParen, "Expected ')' after if condition")
+    val thenBranch = statement()
+    val elseBranch = if matches(Else) then Some(statement()) else None
+    Stmt.If(condition, thenBranch, elseBranch)
 
   private def block(): Stmt =
     val statements = ArrayBuffer.empty[Stmt]
@@ -66,10 +105,10 @@ class Parser(tokens: IndexedSeq[Token]) {
     Stmt.Expression(value)
 
   private def expression(): Expr =
-    assignment()
+    assignment() 
 
   private def assignment(): Expr =
-    var expr = equality()
+    var expr = or()
     if matches(Equal) then
       val equals = previous
       val value = assignment()
@@ -78,6 +117,22 @@ class Parser(tokens: IndexedSeq[Token]) {
           return Expr.Assign(name, value)
         case _ =>
           error(equals, "Invalid assignment target")
+    expr
+
+  private def or(): Expr =
+    var expr = and()
+    while matches(Or) do
+      val operator = previous
+      val right = and()
+      expr = Expr.Logical(expr, operator, right)
+    expr
+
+  private def and(): Expr =
+    var expr = equality()
+    while matches(And) do
+      val operator = previous
+      val right = equality()
+      expr = Expr.Logical(expr, operator, right)
     expr
       
   private def equality(): Expr =
@@ -123,8 +178,8 @@ class Parser(tokens: IndexedSeq[Token]) {
   private def primary(): Expr =
     if matches(False) then Expr.Literal(false)
     else if matches(True) then Expr.Literal(true)
-    else if matches(Nil) then Expr.Literal(null)
-    else if matches(Number, String) then Expr.Literal(previous.literal)
+    else if matches(Nil) then Expr.Literal(Nada)
+    else if matches(Number, String) then Expr.Literal(previous.getValue)
     else if matches(LeftParen) then
       val expr = expression()
       consume(RightParen, "Expect ')' after expression")
@@ -140,7 +195,7 @@ class Parser(tokens: IndexedSeq[Token]) {
     res
 
   private def check(typ: TokenType): Boolean =
-    if isAtEnd then false else peek.typ == typ
+    !isAtEnd && peek.typ == typ
 
   private def advance() =
     if !isAtEnd then {
