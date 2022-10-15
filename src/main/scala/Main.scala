@@ -56,7 +56,7 @@ class Lox {
 
   def error(token: Token, message: String) =
     val where =
-      if token.typ == TokenType.EOF then " at end" else s" at '${token.lexeme}'"
+      if token.typ == TokenType.EOF then "at end" else s"at '${token.lexeme}'"
     report(token.line, where, message)
 
   def runtimeError(error: RuntimeError) =
