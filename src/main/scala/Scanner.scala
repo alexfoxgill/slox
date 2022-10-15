@@ -2,7 +2,7 @@ import scala.collection.mutable.ArrayBuffer
 import TokenType._
 import Scanner._
 
-class Scanner(source: String):
+class Scanner(lox: Lox, source: String):
   private var start = 0
   private var current = 0
   private var line = 1
@@ -35,17 +35,15 @@ class Scanner(source: String):
       case '<' => addToken(if matches('=') then LessEqual else Less)
       case '>' => addToken(if matches('=') then GreaterEqual else Greater)
       case '/' =>
-        if matches('/') then
-          while peek != '\n' && !isAtEnd do advance()
-        else
-          addToken(Slash)
+        if matches('/') then while peek != '\n' && !isAtEnd do advance()
+        else addToken(Slash)
       case ' ' | '\r' | '\t' => ()
-      case '\n' => line += 1
-      case '"' => string()
-      case c if c.isDigit => number()
-      case c if isAlpha(c) => identifier()
+      case '\n'              => line += 1
+      case '"'               => string()
+      case c if c.isDigit    => number()
+      case c if isAlpha(c)   => identifier()
       case _ =>
-        Lox.error(line, "Unexpected character")
+        lox.error(line, "Unexpected character")
 
   private def isAlpha(c: Char) = c.isLetter || c == '_'
   private def isAlphanumeric(c: Char) = c.isDigit || isAlpha(c)
@@ -56,7 +54,7 @@ class Scanner(source: String):
     val text = source.substring(start, current)
     keywords.get(text) match
       case Some(kw) => addToken(kw)
-      case None => addToken(Identifier)
+      case None     => addToken(Identifier)
 
   private def number() =
     while peek.isDigit do advance()
@@ -75,8 +73,7 @@ class Scanner(source: String):
       }
       advance()
 
-    if isAtEnd then
-      Lox.error(line, "Unterminated string")
+    if isAtEnd then lox.error(line, "Unterminated string")
     else
       advance()
 
@@ -84,7 +81,8 @@ class Scanner(source: String):
       addToken(String, Some(value))
 
   private def peek = if isAtEnd then '\u0000' else source.charAt(current)
-  private def peekNext = if current + 1 >= source.length then '\u0000' else source.charAt(current + 1)
+  private def peekNext = if current + 1 >= source.length then '\u0000'
+  else source.charAt(current + 1)
 
   private def matches(expected: Char): Boolean =
     if isAtEnd then false
@@ -120,5 +118,5 @@ object Scanner:
     "this" -> This,
     "true" -> True,
     "var" -> Var,
-    "while" -> While,
+    "while" -> While
   )

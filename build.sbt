@@ -1,7 +1,8 @@
-scalaVersion := "3.0.2"
+scalaVersion := "3.2.0"
 
 name := "hello-world"
 organization := "ch.epfl.scala"
 version := "1.0"
 
-scalacOptions ++= Seq("-new-syntax", "-rewrite")
+libraryDependencies += "com.lihaoyi" %% "utest" % "0.8.1" % "test"
+testFrameworks += new TestFramework("utest.runner.Framework")

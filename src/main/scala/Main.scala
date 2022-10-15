@@ -4,14 +4,14 @@ import java.nio.file.{Files, Paths}
 
 @main def run(args: String*) =
   args match {
-    case Seq() => Lox.runPrompt()
-    case Seq(file) => Lox.runFile(file)
+    case Seq()     => new Lox().runPrompt()
+    case Seq(file) => new Lox().runFile(file)
     case _ =>
       println(s"Args: $args; Usage: jlox [script]")
       System.exit(64)
   }
 
-object Lox {
+class Lox {
   var hadError = false
   var hadRuntimeError = false
 
@@ -28,33 +28,33 @@ object Lox {
       run(line)
     }
 
-  def runFile(file: String) = 
+  def runFile(file: String) =
     val bytes = Files.readAllBytes(Paths.get(file))
     run(new String(bytes))
 
     if hadError then System.exit(65)
     if hadRuntimeError then System.exit(70)
-    
+
   def run(code: String) =
-    val scanner = new Scanner(code)
+    val scanner = new Scanner(this, code)
     val tokens = scanner.scanTokens()
 
-    val parser = new Parser(tokens.toVector)
+    val parser = new Parser(this, tokens.toVector)
     val statements = parser.parse()
 
-    val interpreter = new Interpreter()
+    val interpreter = new Interpreter(this)
     interpreter.interpret(statements)
-  
 
   def error(line: Int, message: String) =
     report(line, "", message)
-  
+
   def report(line: Int, where: String, message: String) =
     println(s"[line $line] Error $where: $message")
     hadError = true
-  
+
   def error(token: Token, message: String) =
-    val where = if token.typ == TokenType.EOF then " at end" else s" at '${token.lexeme}'"
+    val where =
+      if token.typ == TokenType.EOF then " at end" else s" at '${token.lexeme}'"
     report(token.line, where, message)
 
   def runtimeError(error: RuntimeError) =

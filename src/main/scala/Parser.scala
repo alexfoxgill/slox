@@ -10,7 +10,7 @@ enum Expr:
   case Grouping(expr: Expr)
   case Var(name: Token)
   case Assign(name: Token, value: Expr)
-  
+
 enum Stmt:
   case Empty
   case Expression(expr: Expr)
@@ -23,13 +23,12 @@ enum Stmt:
 object Stmt:
   def block(statements: Stmt*): Block = new Block(statements.toList)
 
-class Parser(tokens: IndexedSeq[Token]) {
+class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
   private var current = 0
 
   def parse(): List[Stmt] =
     val statements = ArrayBuffer.empty[Stmt]
-    while !isAtEnd do
-      statements += declaration()
+    while !isAtEnd do statements += declaration()
     statements.toList
 
   private def declaration(): Stmt =
@@ -61,12 +60,15 @@ class Parser(tokens: IndexedSeq[Token]) {
       if matches(Semicolon) then Stmt.Empty
       else if matches(Var) then varDeclaration()
       else expressionStatement()
-    val condition = if !check(Semicolon) then expression() else Expr.Literal(true)
+    val condition =
+      if !check(Semicolon) then expression() else Expr.Literal(true)
     consume(Semicolon, "Expected ';' after for loop condition")
-    val increment: Stmt = Stmt.Expression(if !check(RightParen) then expression() else Expr.Literal(Nada))
+    val increment: Stmt = Stmt.Expression(
+      if !check(RightParen) then expression() else Expr.Literal(Nada)
+    )
     consume(RightParen, "Expected ')' after for loop clauses")
     val body = statement()
-    
+
     Stmt.block(
       initializer,
       Stmt.While(condition, Stmt.block(body, increment))
@@ -89,8 +91,7 @@ class Parser(tokens: IndexedSeq[Token]) {
 
   private def block(): Stmt =
     val statements = ArrayBuffer.empty[Stmt]
-    while !check(RightBrace) && !isAtEnd do
-      statements += declaration()
+    while !check(RightBrace) && !isAtEnd do statements += declaration()
     consume(RightBrace, "Expected '}' after block")
     Stmt.Block(statements.toList)
 
@@ -105,7 +106,7 @@ class Parser(tokens: IndexedSeq[Token]) {
     Stmt.Expression(value)
 
   private def expression(): Expr =
-    assignment() 
+    assignment()
 
   private def assignment(): Expr =
     var expr = or()
@@ -134,7 +135,7 @@ class Parser(tokens: IndexedSeq[Token]) {
       val right = equality()
       expr = Expr.Logical(expr, operator, right)
     expr
-      
+
   private def equality(): Expr =
     var expr = comparison()
     while matches(BangEqual, EqualEqual) do
@@ -172,8 +173,7 @@ class Parser(tokens: IndexedSeq[Token]) {
       val operator = previous
       val right = unary()
       Expr.Unary(operator, right)
-    else
-      primary()
+    else primary()
 
   private def primary(): Expr =
     if matches(False) then Expr.Literal(false)
@@ -211,7 +211,7 @@ class Parser(tokens: IndexedSeq[Token]) {
     if check(typ) then advance() else throw error(peek, message)
 
   private def error(token: Token, message: String) =
-    Lox.error(token, message)
+    lox.error(token, message)
     new ParseError
 
   private def synchronize(): Unit =
@@ -220,8 +220,8 @@ class Parser(tokens: IndexedSeq[Token]) {
       if previous.typ == Semicolon then return ()
       peek.typ match
         case Class | Fun | Var | For | If | While | Print | Return => return ()
-        case _ => advance()
-      
+        case _                                                     => advance()
+
 }
 
 class ParseError extends RuntimeException
