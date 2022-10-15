@@ -40,13 +40,10 @@ object Lox {
     val tokens = scanner.scanTokens()
 
     val parser = new Parser(tokens.toVector)
-    val expression = parser.parse()
+    val statements = parser.parse()
 
     val interpreter = new Interpreter()
-    if expression != null then {
-      val result = interpreter.interpret(expression)
-      println(result)
-    }
+    interpreter.interpret(statements)
   
 
   def error(line: Int, message: String) =
@@ -64,4 +61,5 @@ object Lox {
     println(error.getMessage)
     println(s"[line ${error.token.line}]")
     hadRuntimeError = true
+
 }

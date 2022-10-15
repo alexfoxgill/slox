@@ -1,18 +1,85 @@
+import scala.collection.mutable.ArrayBuffer
+
 import TokenType._
+
+enum Expr:
+  case Literal(value: Any)
+  case Binary(left: Expr, operator: Token, right: Expr)
+  case Unary(operator: Token, right: Expr)
+  case Grouping(expr: Expr)
+  case Var(name: Token)
+  case Assign(name: Token, value: Expr)
+  
+enum Stmt:
+  case Expression(expr: Expr)
+  case Print(expr: Expr)
+  case Var(name: Token, initializer: Expr)
+  case Block(statements: List[Stmt])
 
 class Parser(tokens: IndexedSeq[Token]) {
   private var current = 0
 
-  def parse(): Expr =
-    try {
-      expression()
-    } catch {
-      case _: ParseError => null
-    }
+  def parse(): List[Stmt] =
+    val statements = ArrayBuffer.empty[Stmt]
+    while !isAtEnd do
+      statements += declaration()
+    statements.toList
+
+  private def declaration(): Stmt =
+    try
+      if matches(Var) then varDeclaration()
+      else statement()
+    catch
+      case _: ParseError =>
+        synchronize()
+        null
+
+  private def varDeclaration(): Stmt =
+    val name = consume(Identifier, "Expected variable name")
+    var initializer: Expr = null
+    if matches(Equal) then
+      initializer = expression()
+    
+    consume(Semicolon, "Expected ';' after variable declaration")
+    Stmt.Var(name, initializer)
+
+  private def statement(): Stmt =
+    if matches(Print) then printStatement()
+    else if matches(LeftBrace) then block()
+    else expressionStatement()
+
+  private def block(): Stmt =
+    val statements = ArrayBuffer.empty[Stmt]
+    while !check(RightBrace) && !isAtEnd do
+      statements += declaration()
+    consume(RightBrace, "Expected '}' after block")
+    Stmt.Block(statements.toList)
+
+  private def printStatement(): Stmt =
+    val value = expression()
+    consume(Semicolon, "Expected ';' after value")
+    Stmt.Print(value)
+
+  private def expressionStatement(): Stmt =
+    val value = expression()
+    consume(Semicolon, "Expected ';' after expression")
+    Stmt.Expression(value)
 
   private def expression(): Expr =
-    equality()
+    assignment()
 
+  private def assignment(): Expr =
+    var expr = equality()
+    if matches(Equal) then
+      val equals = previous
+      val value = assignment()
+      expr match
+        case Expr.Var(name) =>
+          return Expr.Assign(name, value)
+        case _ =>
+          error(equals, "Invalid assignment target")
+    expr
+      
   private def equality(): Expr =
     var expr = comparison()
     while matches(BangEqual, EqualEqual) do
@@ -62,8 +129,8 @@ class Parser(tokens: IndexedSeq[Token]) {
       val expr = expression()
       consume(RightParen, "Expect ')' after expression")
       Expr.Grouping(expr)
+    else if matches(Identifier) then Expr.Var(previous)
     else throw error(peek, "Expected expression")
-
 
   private def matches(types: TokenType*): Boolean =
     val res = types.exists(check)
@@ -91,6 +158,15 @@ class Parser(tokens: IndexedSeq[Token]) {
   private def error(token: Token, message: String) =
     Lox.error(token, message)
     new ParseError
+
+  private def synchronize(): Unit =
+    advance()
+    while !isAtEnd do
+      if previous.typ == Semicolon then return ()
+      peek.typ match
+        case Class | Fun | Var | For | If | While | Print | Return => return ()
+        case _ => advance()
+      
 }
 
 class ParseError extends RuntimeException
