@@ -59,7 +59,7 @@ class Interpreter(lox: Lox):
         while isTruthy(evaluate(condition)) do execute(body)
 
       case f @ Stmt.Function(name, params, body) =>
-        environment.define(name.lexeme, new LoxFunction(f))
+        environment.define(name.lexeme, new LoxFunction(f, environment))
 
       case Stmt.Return(keyword, value) =>
         throw new Return(evaluate(value))

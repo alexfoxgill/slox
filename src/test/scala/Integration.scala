@@ -86,4 +86,25 @@ object IntegrationTests extends TestSuite:
       eval(input, "8")
     }
 
+    test("Closures") {
+      val input =
+        """
+        fun makeCounter() {
+          var i = 0;
+          fun count() {
+            i = i + 1;
+            print i;
+          }
+
+          return count;
+        }
+
+        var counter = makeCounter();
+        counter();
+        counter();
+        """
+
+      eval(input, "1", "2")
+    }
+
   }
