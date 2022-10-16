@@ -10,6 +10,7 @@ enum Expr:
   case Grouping(expr: Expr)
   case Var(name: Token)
   case Assign(name: Token, value: Expr)
+  case Call(name: Expr, arguments: List[Expr], closingParen: Token)
 
 enum Stmt:
   case Empty
@@ -19,6 +20,7 @@ enum Stmt:
   case Block(statements: List[Stmt])
   case If(condition: Expr, thenBranch: Stmt, elseBranch: Option[Stmt])
   case While(condition: Expr, body: Stmt)
+  case Function(name: Token, params: List[Token], body: List[Stmt])
 
 object Stmt:
   def block(statements: Stmt*): Block = new Block(statements.toList)
@@ -34,11 +36,27 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
   private def declaration(): Stmt =
     try
       if matches(Var) then varDeclaration()
+      else if matches(Fun) then function("function")
       else statement()
     catch
       case _: ParseError =>
         synchronize()
         Stmt.Empty
+
+  private def function(kind: String): Stmt =
+    val name = consume(Identifier, s"Expected $kind name")
+    consume(LeftParen, s"Expected '(' after $kind name")
+    val params = ArrayBuffer.empty[Token]
+    if !check(RightParen) then
+      params += consume(Identifier, "Expected parameter name")
+      while matches(Comma) do
+        if params.size >= 255 then
+          error(peek, "Can't have more than 255 parameters")
+        params += consume(Identifier, "Expected parameter name")
+    consume(RightParen, "Expected ')' after parameters")
+    consume(LeftBrace, s"Expected '{' before $kind body")
+    val body = block()
+    Stmt.Function(name, params.toList, body)
 
   private def varDeclaration(): Stmt =
     val name = consume(Identifier, "Expected variable name")
@@ -51,7 +69,7 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
     else if matches(If) then ifStatement()
     else if matches(While) then whileStatement()
     else if matches(For) then forStatement()
-    else if matches(LeftBrace) then block()
+    else if matches(LeftBrace) then Stmt.Block(block())
     else expressionStatement()
 
   private def forStatement(): Stmt =
@@ -89,11 +107,11 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
     val elseBranch = if matches(Else) then Some(statement()) else None
     Stmt.If(condition, thenBranch, elseBranch)
 
-  private def block(): Stmt =
+  private def block(): List[Stmt] =
     val statements = ArrayBuffer.empty[Stmt]
     while !check(RightBrace) && !isAtEnd do statements += declaration()
     consume(RightBrace, "Expected '}' after block")
-    Stmt.Block(statements.toList)
+    statements.toList
 
   private def printStatement(): Stmt =
     val value = expression()
@@ -173,7 +191,23 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
       val operator = previous
       val right = unary()
       Expr.Unary(operator, right)
-    else primary()
+    else call()
+
+  private def call(): Expr =
+    var expr = primary()
+    while matches(LeftParen) do expr = finishCall(expr)
+    expr
+
+  private def finishCall(callee: Expr): Expr =
+    val args = ArrayBuffer.empty[Expr]
+    if !check(RightParen) then
+      args += expression()
+      while matches(Comma) do
+        if args.length >= 255 then
+          error(peek, "Can't have more than 255 arguments")
+        args += expression()
+    val closingParen = consume(RightParen, "Expected ')' after arguments")
+    Expr.Call(callee, args.toList, closingParen)
 
   private def primary(): Expr =
     if matches(False) then Expr.Literal(false)

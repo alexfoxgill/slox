@@ -1,12 +1,30 @@
+import java.time.LocalDateTime
 import scala.collection.mutable.HashMap
 
 object Nada
 
+trait LoxCallable:
+  def call(interpreter: Interpreter, arguments: List[Any]): Any
+  def arity: Int
+
+class LoxFunction(declaration: Stmt.Function) extends LoxCallable:
+  def call(interpreter: Interpreter, arguments: List[Any]): Any = {
+    val env = new Environment(Some(interpreter.globals))
+    declaration.params.zip(arguments).foreach { (name, value) =>
+      env.define(name.lexeme, value)
+    }
+    interpreter.execute(declaration.body, env)
+  }
+  def arity = declaration.params.length
+  override def toString =
+    s"${declaration.name.lexeme}(${declaration.params.map(_.lexeme).mkString(",")})"
+
 class Environment(enclosing: Option[Environment] = None):
   private val values = HashMap.empty[String, Any]
 
-  def define(name: String, value: Any): Unit =
+  def define(name: String, value: Any): Environment =
     values += (name -> value)
+    this
 
   def assign(name: Token, value: Any): Unit =
     if values.contains(name.lexeme) then values += (name.lexeme -> value)
@@ -25,14 +43,28 @@ class Environment(enclosing: Option[Environment] = None):
       }
 
 class Interpreter(lox: Lox):
-  private var environment = new Environment
+  val globals = new Environment()
+    .define(
+      "clock",
+      new LoxCallable {
+        def arity = 0
+        def call(interpreter: Interpreter, args: List[Any]): Any =
+          System.currentTimeMillis / 1000.0
+        override def toString = "<native fn>"
+      }
+    )
+  private var environment = globals
 
   def interpret(statements: List[Stmt]): Any =
-    try {
-      statements.foreach(execute)
-    } catch {
-      case e: RuntimeError => lox.runtimeError(e)
-    }
+    try statements.foreach(execute)
+    catch case e: RuntimeError => lox.runtimeError(e)
+
+  def execute(statements: List[Stmt], env: Environment) =
+    val prevEnv = environment
+    try
+      environment = env
+      interpret(statements)
+    finally environment = prevEnv
 
   private def execute(stmt: Stmt): Unit =
     stmt match
@@ -64,6 +96,9 @@ class Interpreter(lox: Lox):
 
       case Stmt.While(condition, body) =>
         while isTruthy(evaluate(condition)) do execute(body)
+
+      case f @ Stmt.Function(name, params, body) =>
+        environment.define(name.lexeme, new LoxFunction(f))
 
   private def evaluate(expr: Expr): Any =
     expr match
@@ -111,6 +146,23 @@ class Interpreter(lox: Lox):
         (isTruthy(l), operator.typ) match
           case (true, TokenType.And) | (false, TokenType.Or) => evaluate(right)
           case _                                             => l
+
+      case Expr.Call(callee, args, closingParen) =>
+        val c = evaluate(callee)
+        val a = args.map(evaluate)
+        c match
+          case c: LoxCallable =>
+            if c.arity == args.length then c.call(this, a)
+            else
+              throw new RuntimeError(
+                closingParen,
+                s"Expected ${c.arity} arguments but got ${args.length}"
+              )
+          case _ =>
+            throw new RuntimeError(
+              closingParen,
+              "Can only call functions and classes"
+            )
 
   private def stringify(value: Any): String =
     value match
