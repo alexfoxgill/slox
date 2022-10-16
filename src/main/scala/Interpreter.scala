@@ -145,6 +145,19 @@ class Interpreter(lox: Lox):
               "Can only call functions and classes"
             )
 
+      case Expr.Get(obj, name) =>
+        evaluate(obj) match
+          case instance: LoxInstance => instance.get(name)
+          case _ =>
+            throw new RuntimeError(name, "Only instances have properties")
+
+      case Expr.Set(obj, name, value) =>
+        val v = evaluate(value)
+        evaluate(obj) match
+          case instance: LoxInstance => instance.set(name, v)
+          case _ =>
+            throw new RuntimeError(name, "Only instances have properties")
+
   private def stringify(value: Any): String =
     value match
       case LoxNil    => "nil"

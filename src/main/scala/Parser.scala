@@ -127,6 +127,8 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
       val equals = previous
       val value = assignment()
       expr match
+        case Expr.Get(obj, name) =>
+          return Expr.Set(obj, name, value)
         case Expr.Var(id, name) =>
           return Expr.Assign(Expr.Id.generate(), name, value)
         case _ =>
@@ -190,7 +192,13 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
 
   private def call(): Expr =
     var expr = primary()
-    while matches(LeftParen) do expr = finishCall(expr)
+    var continue = true
+    while continue do
+      if matches(LeftParen) then expr = finishCall(expr)
+      else if matches(Dot) then
+        val name = consume(Identifier, "Expected property name after '.'")
+        expr = Expr.Get(expr, name)
+      else continue = false
     expr
 
   private def finishCall(callee: Expr): Expr =

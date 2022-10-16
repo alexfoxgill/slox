@@ -143,8 +143,20 @@ object IntegrationTests extends TestSuite:
         print Bagel;
         var bagel = Bagel();
         print bagel;
-      """
+        """
 
       eval(input, "Bagel", "Bagel instance")
+    }
+
+    test("Class properties") {
+      val input =
+        """
+        class Dog {}
+        var basil = Dog();
+        basil.name = "basil";
+        print basil.name;
+        """
+
+      eval(input, "basil")
     }
   }

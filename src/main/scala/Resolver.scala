@@ -84,6 +84,11 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Expr.Call(callee, arguments, _) =>
         resolve(callee)
         arguments.foreach(resolve)
+      case Expr.Get(obj, name) =>
+        resolve(obj)
+      case Expr.Set(obj, name, value) =>
+        resolve(obj)
+        resolve(value)
       case Expr.Literal(_) => ()
 
   private def resolveFunction(

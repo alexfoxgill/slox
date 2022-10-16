@@ -7,6 +7,8 @@ enum Expr:
   case Var(id: Expr.Id, name: Token)
   case Assign(id: Expr.Id, name: Token, value: Expr)
   case Call(callee: Expr, arguments: List[Expr], closingParen: Token)
+  case Get(obj: Expr, name: Token)
+  case Set(obj: Expr, name: Token, value: Expr)
 
 object Expr:
   opaque type Id = Int
