@@ -14,13 +14,24 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
     try
       if matches(Var) then varDeclaration()
       else if matches(Fun) then function("function")
+      else if matches(Class) then classDeclaration()
       else statement()
     catch
       case _: ParseError =>
         synchronize()
         Stmt.Empty
 
-  private def function(kind: String): Stmt =
+  private def classDeclaration(): Stmt =
+    val name = consume(Identifier, "Expected class name")
+    consume(LeftBrace, "Expected '{' before class body")
+
+    val methods = ArrayBuffer.empty[Stmt.Function]
+    while !check(RightBrace) && !isAtEnd do methods += function("method")
+
+    consume(RightBrace, "Expected '}' after class body")
+    Stmt.Class(name, methods.toList)
+
+  private def function(kind: String): Stmt.Function =
     val name = consume(Identifier, s"Expected $kind name")
     consume(LeftParen, s"Expected '(' after $kind name")
     val params = ArrayBuffer.empty[Token]

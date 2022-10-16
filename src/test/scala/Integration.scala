@@ -136,4 +136,15 @@ object IntegrationTests extends TestSuite:
       eval(input, "global", "global")
     }
 
+    test("Basic class") {
+      val input =
+        """
+        class Bagel {}
+        print Bagel;
+        var bagel = Bagel();
+        print bagel;
+      """
+
+      eval(input, "Bagel", "Bagel instance")
+    }
   }

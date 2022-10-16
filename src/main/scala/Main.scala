@@ -45,11 +45,11 @@ class Lox {
     val statements = parser.parse()
 
     if hadError then return ()
-
     val interpreter = new Interpreter(this)
     val resolver = new Resolver(this, interpreter)
     resolver.resolve(statements)
 
+    if hadError then return ()
     interpreter.interpret(statements)
 
   def error(line: Int, message: String) =

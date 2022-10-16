@@ -4,8 +4,12 @@ import scala.collection.mutable.Stack
 enum IsReady:
   case Yes, No
 
+enum FunctionType:
+  case None, Function
+
 class Resolver(lox: Lox, interpreter: Interpreter):
   private val scopes = Stack.empty[HashMap[String, IsReady]]
+  private var currentFunction = FunctionType.None
 
   def resolve(statements: List[Stmt]): Unit =
     statements.foreach(resolve)
@@ -25,7 +29,7 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case f @ Stmt.Function(name, _, _) =>
         declare(name)
         define(name)
-        resolveFunction(f)
+        resolveFunction(f, FunctionType.Function)
 
       case Stmt.If(condition, thenBranch, elseBranch) =>
         resolve(condition)
@@ -35,7 +39,9 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Stmt.Print(expr) =>
         resolve(expr)
 
-      case Stmt.Return(_, value) =>
+      case Stmt.Return(keyword, value) =>
+        if currentFunction == FunctionType.None then
+          lox.error(keyword, "Can't return from top-level code")
         resolve(value)
 
       case Stmt.While(condition, body) =>
@@ -44,6 +50,10 @@ class Resolver(lox: Lox, interpreter: Interpreter):
 
       case Stmt.Expression(expr) =>
         resolve(expr)
+
+      case Stmt.Class(name, methods) =>
+        declare(name)
+        define(name)
 
       case Stmt.Empty =>
         ()
@@ -74,16 +84,23 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Expr.Call(callee, arguments, _) =>
         resolve(callee)
         arguments.foreach(resolve)
-      case _: Expr.Literal => ()
+      case Expr.Literal(_) => ()
 
-  private def resolveFunction(function: Stmt.Function) =
-    inScope {
-      function.params.foreach { p =>
-        declare(p)
-        define(p)
+  private def resolveFunction(
+      function: Stmt.Function,
+      functionType: FunctionType
+  ) =
+    var prevFunction = currentFunction
+    try
+      currentFunction = functionType
+      inScope {
+        function.params.foreach { p =>
+          declare(p)
+          define(p)
+        }
+        resolve(function.body)
       }
-      resolve(function.body)
-    }
+    finally currentFunction = prevFunction
 
   private def resolveLocal(id: Expr.Id, name: Token) =
     val depth = scopes
@@ -92,12 +109,18 @@ class Resolver(lox: Lox, interpreter: Interpreter):
     if depth != -1 then interpreter.resolve(id, depth)
 
   private def declare(name: Token) =
-    if scopes.nonEmpty then scopes.head += name.lexeme -> IsReady.No
+    scopes.headOption.foreach { scope =>
+      if scope.contains(name.lexeme) then
+        lox.error(name, "Already a variable with this name in this scope")
+      scope += name.lexeme -> IsReady.No
+    }
 
   private def define(name: Token) =
-    if scopes.nonEmpty then scopes.head += name.lexeme -> IsReady.Yes
+    scopes.headOption.foreach(_ += name.lexeme -> IsReady.Yes)
 
   private def inScope(block: => Unit): Unit =
     scopes.push(HashMap.empty)
-    block
-    scopes.pop()
+    try
+      block
+    finally
+      scopes.pop()

@@ -69,6 +69,11 @@ class Interpreter(lox: Lox):
       case Stmt.Return(keyword, value) =>
         throw new Return(evaluate(value))
 
+      case Stmt.Class(name, methods) =>
+        environment.define(name.lexeme, null)
+        val clas = new LoxClass(name.lexeme)
+        environment.assign(name, clas)
+
   private def evaluate(expr: Expr): Any =
     expr match
       case Expr.Literal(value) => value
