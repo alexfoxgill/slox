@@ -2,29 +2,6 @@ import TokenType._
 
 import scala.collection.mutable.ArrayBuffer
 
-enum Expr:
-  case Literal(value: Any)
-  case Binary(left: Expr, operator: Token, right: Expr)
-  case Logical(left: Expr, operator: Token, right: Expr)
-  case Unary(operator: Token, right: Expr)
-  case Grouping(expr: Expr)
-  case Var(name: Token)
-  case Assign(name: Token, value: Expr)
-  case Call(name: Expr, arguments: List[Expr], closingParen: Token)
-
-enum Stmt:
-  case Empty
-  case Expression(expr: Expr)
-  case Print(expr: Expr)
-  case Var(name: Token, initializer: Option[Expr])
-  case Block(statements: List[Stmt])
-  case If(condition: Expr, thenBranch: Stmt, elseBranch: Option[Stmt])
-  case While(condition: Expr, body: Stmt)
-  case Function(name: Token, params: List[Token], body: List[Stmt])
-
-object Stmt:
-  def block(statements: Stmt*): Block = new Block(statements.toList)
-
 class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
   private var current = 0
 
