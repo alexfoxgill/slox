@@ -116,8 +116,8 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
       val equals = previous
       val value = assignment()
       expr match
-        case Expr.Var(name) =>
-          return Expr.Assign(name, value)
+        case Expr.Var(id, name) =>
+          return Expr.Assign(Expr.Id.generate(), name, value)
         case _ =>
           error(equals, "Invalid assignment target")
     expr
@@ -202,7 +202,7 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
       val expr = expression()
       consume(RightParen, "Expect ')' after expression")
       Expr.Grouping(expr)
-    else if matches(Identifier) then Expr.Var(previous)
+    else if matches(Identifier) then Expr.Var(Expr.Id.generate(), previous)
     else throw error(peek, "Expected expression")
 
   private def matches(types: TokenType*): Boolean =

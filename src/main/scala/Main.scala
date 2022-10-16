@@ -37,14 +37,19 @@ class Lox {
     if hadError then System.exit(65)
     if hadRuntimeError then System.exit(70)
 
-  def run(code: String) =
+  def run(code: String): Unit =
     val scanner = new Scanner(this, code)
     val tokens = scanner.scanTokens()
 
     val parser = new Parser(this, tokens.toVector)
     val statements = parser.parse()
 
+    if hadError then return ()
+
     val interpreter = new Interpreter(this)
+    val resolver = new Resolver(this, interpreter)
+    resolver.resolve(statements)
+
     interpreter.interpret(statements)
 
   def error(line: Int, message: String) =

@@ -16,6 +16,8 @@ class Interpreter(lox: Lox):
     )
   private var environment = globals
 
+  private val locals = HashMap.empty[Expr.Id, Int]
+
   def interpret(statements: List[Stmt]): Any =
     try statements.foreach(execute)
     catch case e: RuntimeError => lox.runtimeError(e)
@@ -26,6 +28,9 @@ class Interpreter(lox: Lox):
       environment = env
       interpret(statements)
     finally environment = prevEnv
+
+  def resolve(id: Expr.Id, depth: Int): Unit =
+    locals += id -> depth
 
   private def execute(stmt: Stmt): Unit =
     stmt match
@@ -68,10 +73,17 @@ class Interpreter(lox: Lox):
     expr match
       case Expr.Literal(value) => value
       case Expr.Grouping(expr) => evaluate(expr)
-      case Expr.Var(name)      => environment.get(name)
+      case Expr.Var(id, name) =>
+        locals
+          .get(id)
+          .map(depth => environment.get(name, depth))
+          .getOrElse(globals.get(name))
 
-      case Expr.Assign(name, value) =>
-        environment.assign(name, evaluate(value))
+      case Expr.Assign(id, name, value) =>
+        val rhs = evaluate(value)
+        locals.get(id) match
+          case Some(depth) => environment.assign(name, rhs, depth)
+          case _           => globals.assign(name, rhs)
         value
 
       case Expr.Unary(operator, right) =>

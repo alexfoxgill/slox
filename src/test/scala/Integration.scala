@@ -13,10 +13,8 @@ object IntegrationTests extends TestSuite:
   def eval(code: String, expectedOutput: String*) =
     val lox = new TestLox
     lox.run(code)
-    lox.printed
-      .zip(expectedOutput)
-      .foreach((actual, expected) => assert(actual == expected))
-    assert(lox.printed.length == expectedOutput.length)
+    val actual = lox.printed
+    assert(actual == expectedOutput)
 
   val tests = Tests {
     test("Basic operators") {
@@ -41,6 +39,19 @@ object IntegrationTests extends TestSuite:
         print a;"""
 
       eval(input, "2", "1")
+    }
+
+    test("Basic loop") {
+      val input =
+        """
+        var i = 0;
+        while (i < 10) {
+          i = i + 1;
+        }
+        print i;
+        """
+
+      eval(input, "10")
     }
 
     test("Loops and conditions") {
@@ -105,6 +116,24 @@ object IntegrationTests extends TestSuite:
         """
 
       eval(input, "1", "2")
+    }
+
+    test("Closure rebinding") {
+      val input =
+        """
+        var a = "global";
+        {
+          fun showA() {
+            print a;
+          }
+
+          showA();
+          var a = "block";
+          showA();
+        }
+        """
+
+      eval(input, "global", "global")
     }
 
   }

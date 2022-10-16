@@ -13,12 +13,33 @@ class Environment(enclosing: Option[Environment] = None):
       enclosing match
         case Some(env) => env.assign(name, value)
         case None =>
-          throw new RuntimeError(name, s"Undefined variable '${name.lexeme}'")
+          throw new RuntimeError(
+            name,
+            s"Cannot assign to undefined variable '${name.lexeme}'"
+          )
+
+  def assign(name: Token, value: Any, depth: Int): Unit =
+    ancestor(depth).values += (name.lexeme -> value)
 
   def get(name: Token): Any =
     values
       .get(name.lexeme)
       .orElse(enclosing.map(_.get(name)))
       .getOrElse {
-        throw new RuntimeError(name, s"Undefined variable '${name.lexeme}'")
+        throw new RuntimeError(
+          name,
+          s"Cannot refer to undefined variable '${name.lexeme}'"
+        )
       }
+
+  def ancestor(depth: Int): Environment =
+    (enclosing, depth) match
+      case (_, 0)            => this
+      case (Some(parent), _) => parent.ancestor(depth - 1)
+      case _ =>
+        throw new Exception(
+          s"Expected to find parent environment at depth $depth"
+        )
+
+  def get(name: Token, depth: Int): Any =
+    ancestor(depth).values(name.lexeme)
