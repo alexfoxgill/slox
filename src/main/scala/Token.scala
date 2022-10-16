@@ -1,9 +1,13 @@
-case class Token(typ: TokenType, lexeme: String, literal: Option[Any], line: Int):
-  def getValue: Any = literal.getOrElse(Nada)
+case class Token(
+    typ: TokenType,
+    lexeme: String,
+    literal: Option[Any],
+    line: Int
+):
+  def getValue: Any = literal.getOrElse(LoxNil)
 
 enum TokenType:
-  case 
-    LeftParen,
+  case LeftParen,
     RightParen,
     LeftBrace,
     RightBrace,
@@ -14,7 +18,6 @@ enum TokenType:
     Semicolon,
     Slash,
     Star,
-
     Bang,
     BangEqual,
     Equal,
@@ -46,6 +49,5 @@ enum TokenType:
     True,
     Var,
     While,
-
     EOF
 end TokenType

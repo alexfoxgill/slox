@@ -7,6 +7,7 @@ enum Stmt:
   case If(condition: Expr, thenBranch: Stmt, elseBranch: Option[Stmt])
   case While(condition: Expr, body: Stmt)
   case Function(name: Token, params: List[Token], body: List[Stmt])
+  case Return(keyword: Token, value: Expr)
 
 object Stmt:
   def block(statements: Stmt*): Block = new Block(statements.toList)

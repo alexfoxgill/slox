@@ -13,7 +13,10 @@ object IntegrationTests extends TestSuite:
   def eval(code: String, expectedOutput: String*) =
     val lox = new TestLox
     lox.run(code)
-    assert(lox.printed == expectedOutput)
+    lox.printed
+      .zip(expectedOutput)
+      .foreach((actual, expected) => assert(actual == expected))
+    assert(lox.printed.length == expectedOutput.length)
 
   val tests = Tests {
     test("Basic operators") {
@@ -67,6 +70,20 @@ object IntegrationTests extends TestSuite:
         """
 
       eval(input, "1", "2", "3")
+    }
+
+    test("Return") {
+      val input =
+        """
+        fun fib(n) {
+          if (n <= 1) return n;
+          return fib(n - 2) + fib(n - 1);
+        }
+
+        print fib(6);
+        """
+
+      eval(input, "8")
     }
 
   }

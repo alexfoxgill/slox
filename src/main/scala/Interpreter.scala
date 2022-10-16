@@ -1,7 +1,7 @@
 import java.time.LocalDateTime
 import scala.collection.mutable.HashMap
 
-object Nada
+case class Return(value: Any) extends Throwable
 
 class Interpreter(lox: Lox):
   val globals = new Environment()
@@ -41,7 +41,7 @@ class Interpreter(lox: Lox):
         lox.print(stringify(value))
 
       case Stmt.Var(name, initializer) =>
-        val value: Any = initializer.map(evaluate).getOrElse(Nada)
+        val value: Any = initializer.map(evaluate).getOrElse(LoxNil)
         environment.define(name.lexeme, value)
 
       case Stmt.Block(statements) =>
@@ -60,6 +60,9 @@ class Interpreter(lox: Lox):
 
       case f @ Stmt.Function(name, params, body) =>
         environment.define(name.lexeme, new LoxFunction(f))
+
+      case Stmt.Return(keyword, value) =>
+        throw new Return(evaluate(value))
 
   private def evaluate(expr: Expr): Any =
     expr match
@@ -127,12 +130,12 @@ class Interpreter(lox: Lox):
 
   private def stringify(value: Any): String =
     value match
-      case Nada      => "nil"
+      case LoxNil    => "nil"
       case x: Double => x.toString.stripSuffix(".0")
       case _         => value.toString
 
   private def isTruthy(obj: Any) =
-    obj != Nada && obj != false
+    obj != LoxNil && obj != false
 
 class RuntimeError(val token: Token, message: String)
     extends RuntimeException(message)

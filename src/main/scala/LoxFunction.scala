@@ -4,7 +4,10 @@ class LoxFunction(declaration: Stmt.Function) extends LoxCallable:
     declaration.params.zip(arguments).foreach { (name, value) =>
       env.define(name.lexeme, value)
     }
-    interpreter.execute(declaration.body, env)
+    try
+      interpreter.execute(declaration.body, env)
+      LoxNil
+    catch case Return(value) => value
   }
   def arity = declaration.params.length
   override def toString =
