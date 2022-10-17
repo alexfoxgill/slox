@@ -1,7 +1,7 @@
 import java.time.LocalDateTime
 import scala.collection.mutable.HashMap
 
-case class Return(value: Any) extends Throwable
+case class Return(value: LoxValue) extends Throwable
 
 class Interpreter(lox: Lox):
   val globals = new Environment()
@@ -9,8 +9,8 @@ class Interpreter(lox: Lox):
       "clock",
       new LoxCallable {
         def arity = 0
-        def call(interpreter: Interpreter, args: List[Any]): Any =
-          System.currentTimeMillis / 1000.0
+        def call(interpreter: Interpreter, args: List[LoxValue]): LoxValue =
+          LoxWrapper(System.currentTimeMillis / 1000.0)
         override def toString = "<native fn>"
       }
     )
@@ -18,7 +18,7 @@ class Interpreter(lox: Lox):
 
   private val locals = HashMap.empty[Expr.Id, Int]
 
-  def interpret(statements: List[Stmt]): Any =
+  def interpret(statements: List[Stmt]): Unit =
     try statements.foreach(execute)
     catch case e: RuntimeError => lox.runtimeError(e)
 
@@ -46,7 +46,7 @@ class Interpreter(lox: Lox):
         lox.print(stringify(value))
 
       case Stmt.Var(name, initializer) =>
-        val value: Any = initializer.map(evaluate).getOrElse(LoxNil)
+        val value: LoxValue = initializer.map(evaluate).getOrElse(LoxNil)
         environment.define(name.lexeme, value)
 
       case Stmt.Block(statements) =>
@@ -74,7 +74,7 @@ class Interpreter(lox: Lox):
         val clas = new LoxClass(name.lexeme)
         environment.assign(name, clas)
 
-  private def evaluate(expr: Expr): Any =
+  private def evaluate(expr: Expr): LoxValue =
     expr match
       case Expr.Literal(value) => value
       case Expr.Grouping(expr) => evaluate(expr)
@@ -89,38 +89,42 @@ class Interpreter(lox: Lox):
         locals.get(id) match
           case Some(depth) => environment.assign(name, rhs, depth)
           case _           => globals.assign(name, rhs)
-        value
+        rhs
 
       case Expr.Unary(operator, right) =>
-        (operator.typ, evaluate(right)) match
-          case (TokenType.Minus, r: Double) => -r
-          case (TokenType.Bang, r)          => !isTruthy(right)
+        LoxWrapper(
+          (operator.typ, evaluate(right)) match
+            case (TokenType.Minus, r: Double) => -r
+            case (TokenType.Bang, r)          => !isTruthy(r)
 
-          case (_, r) =>
-            throw new RuntimeError(
-              operator,
-              s"Can't evaluate ${operator.lexeme} $r"
-            )
+            case (_, r) =>
+              throw new RuntimeError(
+                operator,
+                s"Can't evaluate ${operator.lexeme} $r"
+              )
+        )
 
       case Expr.Binary(left, operator, right) =>
-        (evaluate(left), operator.typ, evaluate(right)) match
-          case (l: Double, TokenType.Minus, r: Double)        => l - r
-          case (l: Double, TokenType.Plus, r: Double)         => l + r
-          case (l: Double, TokenType.Star, r: Double)         => l * r
-          case (l: Double, TokenType.Slash, r: Double)        => l / r
-          case (l: String, TokenType.Plus, r: String)         => l + r
-          case (l: Double, TokenType.Greater, r: Double)      => l > r
-          case (l: Double, TokenType.GreaterEqual, r: Double) => l >= r
-          case (l: Double, TokenType.Less, r: Double)         => l < r
-          case (l: Double, TokenType.LessEqual, r: Double)    => l <= r
-          case (l, TokenType.BangEqual, r)                    => !l.equals(r)
-          case (l, TokenType.EqualEqual, r)                   => l.equals(r)
+        LoxWrapper(
+          (evaluate(left), operator.typ, evaluate(right)) match
+            case (l: Double, TokenType.Minus, r: Double)        => l - r
+            case (l: Double, TokenType.Plus, r: Double)         => l + r
+            case (l: Double, TokenType.Star, r: Double)         => l * r
+            case (l: Double, TokenType.Slash, r: Double)        => l / r
+            case (l: String, TokenType.Plus, r: String)         => l + r
+            case (l: Double, TokenType.Greater, r: Double)      => l > r
+            case (l: Double, TokenType.GreaterEqual, r: Double) => l >= r
+            case (l: Double, TokenType.Less, r: Double)         => l < r
+            case (l: Double, TokenType.LessEqual, r: Double)    => l <= r
+            case (l, TokenType.BangEqual, r)                    => !l.equals(r)
+            case (l, TokenType.EqualEqual, r)                   => l.equals(r)
 
-          case (l, _, r) =>
-            throw new RuntimeError(
-              operator,
-              s"Can't evaluate $l ${operator.lexeme} $r"
-            )
+            case (l, _, r) =>
+              throw new RuntimeError(
+                operator,
+                s"Can't evaluate $l ${operator.lexeme} $r"
+              )
+        )
 
       case Expr.Logical(left, operator, right) =>
         val l = evaluate(left)
@@ -154,18 +158,20 @@ class Interpreter(lox: Lox):
       case Expr.Set(obj, name, value) =>
         val v = evaluate(value)
         evaluate(obj) match
-          case instance: LoxInstance => instance.set(name, v)
+          case instance: LoxInstance =>
+            instance.set(name, v)
+            v
           case _ =>
             throw new RuntimeError(name, "Only instances have properties")
 
-  private def stringify(value: Any): String =
+  private def stringify(value: LoxValue): String =
     value match
       case LoxNil    => "nil"
       case x: Double => x.toString.stripSuffix(".0")
       case _         => value.toString
 
-  private def isTruthy(obj: Any) =
-    obj != LoxNil && obj != false
+  private def isTruthy(obj: LoxValue) =
+    obj != LoxNil && obj != LoxWrapper(false)
 
 class RuntimeError(val token: Token, message: String)
     extends RuntimeException(message)

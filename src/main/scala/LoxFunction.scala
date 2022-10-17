@@ -1,6 +1,7 @@
 class LoxFunction(declaration: Stmt.Function, parentEnv: Environment)
-    extends LoxCallable:
-  def call(interpreter: Interpreter, arguments: List[Any]): Any = {
+    extends LoxRoot
+    with LoxCallable:
+  def call(interpreter: Interpreter, arguments: List[LoxValue]): LoxValue = {
     val env = new Environment(Some(parentEnv))
     declaration.params.zip(arguments).foreach { (name, value) =>
       env.define(name.lexeme, value)

@@ -74,7 +74,7 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
       else if matches(Var) then varDeclaration()
       else expressionStatement()
     val condition =
-      if !check(Semicolon) then expression() else Expr.Literal(true)
+      if !check(Semicolon) then expression() else Expr.Literal(LoxWrapper(true))
     consume(Semicolon, "Expected ';' after for loop condition")
     val increment: Stmt = Stmt.Expression(
       if !check(RightParen) then expression() else Expr.Literal(LoxNil)
@@ -213,10 +213,11 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
     Expr.Call(callee, args.toList, closingParen)
 
   private def primary(): Expr =
-    if matches(False) then Expr.Literal(false)
-    else if matches(True) then Expr.Literal(true)
+    if matches(False) then Expr.Literal(LoxWrapper(false))
+    else if matches(True) then Expr.Literal(LoxWrapper(true))
     else if matches(Nil) then Expr.Literal(LoxNil)
-    else if matches(Number, String) then Expr.Literal(previous.getValue)
+    else if matches(Number, String) then
+      Expr.Literal(LoxWrapper(previous.getValue))
     else if matches(LeftParen) then
       val expr = expression()
       consume(RightParen, "Expect ')' after expression")

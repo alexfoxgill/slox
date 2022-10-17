@@ -1,5 +1,5 @@
 enum Expr:
-  case Literal(value: Any)
+  case Literal(value: LoxValue)
   case Binary(left: Expr, operator: Token, right: Expr)
   case Logical(left: Expr, operator: Token, right: Expr)
   case Unary(operator: Token, right: Expr)

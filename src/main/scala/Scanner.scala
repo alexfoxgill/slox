@@ -1,6 +1,7 @@
-import scala.collection.mutable.ArrayBuffer
-import TokenType._
 import Scanner._
+import TokenType._
+
+import scala.collection.mutable.ArrayBuffer
 
 class Scanner(lox: Lox, source: String):
   private var start = 0
@@ -64,7 +65,10 @@ class Scanner(lox: Lox, source: String):
       while peek.isDigit do advance()
     }
 
-    addToken(Number, Some(source.substring(start, current).toDouble))
+    addToken(
+      Number,
+      Some(LoxWrapper(source.substring(start, current).toDouble))
+    )
 
   private def string() =
     while peek != '"' && !isAtEnd do
@@ -78,7 +82,7 @@ class Scanner(lox: Lox, source: String):
       advance()
 
       val value = source.substring(start + 1, current - 1)
-      addToken(String, Some(value))
+      addToken(String, Some(LoxWrapper(value)))
 
   private def peek = if isAtEnd then '\u0000' else source.charAt(current)
   private def peekNext = if current + 1 >= source.length then '\u0000'
@@ -97,7 +101,10 @@ class Scanner(lox: Lox, source: String):
     current += 1
     c
 
-  private def addToken(token: TokenType, literal: Option[Any] = None) =
+  private def addToken(
+      token: TokenType,
+      literal: Option[LoxPrimitive] = None
+  ) =
     val text = source.substring(start, current)
     tokens += new Token(token, text, literal, line)
 

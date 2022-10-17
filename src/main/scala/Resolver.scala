@@ -5,7 +5,7 @@ enum IsReady:
   case Yes, No
 
 enum FunctionType:
-  case None, Function
+  case None, Function, Method
 
 class Resolver(lox: Lox, interpreter: Interpreter):
   private val scopes = Stack.empty[HashMap[String, IsReady]]
@@ -54,6 +54,7 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Stmt.Class(name, methods) =>
         declare(name)
         define(name)
+        methods.foreach(resolveFunction(_, FunctionType.Method))
 
       case Stmt.Empty =>
         ()

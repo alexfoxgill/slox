@@ -1,1 +1,1 @@
-object LoxNil
+object LoxNil extends LoxRoot

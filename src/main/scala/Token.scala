@@ -1,10 +1,11 @@
 case class Token(
     typ: TokenType,
     lexeme: String,
-    literal: Option[Any],
+    literal: Option[LoxPrimitive],
     line: Int
 ):
-  def getValue: Any = literal.getOrElse(LoxNil)
+  def getValue: LoxPrimitive | LoxNil.type =
+    literal.getOrElse(LoxNil)
 
 enum TokenType:
   case LeftParen,

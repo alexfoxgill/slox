@@ -1,13 +1,13 @@
 import scala.collection.mutable.HashMap
 
 class Environment(enclosing: Option[Environment] = None):
-  private val values = HashMap.empty[String, Any]
+  private val values = HashMap.empty[String, LoxValue]
 
-  def define(name: String, value: Any): Environment =
+  def define(name: String, value: LoxValue): Environment =
     values += (name -> value)
     this
 
-  def assign(name: Token, value: Any): Unit =
+  def assign(name: Token, value: LoxValue): Unit =
     if values.contains(name.lexeme) then values += (name.lexeme -> value)
     else
       enclosing match
@@ -18,10 +18,10 @@ class Environment(enclosing: Option[Environment] = None):
             s"Cannot assign to undefined variable '${name.lexeme}'"
           )
 
-  def assign(name: Token, value: Any, depth: Int): Unit =
+  def assign(name: Token, value: LoxValue, depth: Int): Unit =
     ancestor(depth).values += (name.lexeme -> value)
 
-  def get(name: Token): Any =
+  def get(name: Token): LoxValue =
     values
       .get(name.lexeme)
       .orElse(enclosing.map(_.get(name)))
@@ -41,5 +41,5 @@ class Environment(enclosing: Option[Environment] = None):
           s"Expected to find parent environment at depth $depth"
         )
 
-  def get(name: Token, depth: Int): Any =
+  def get(name: Token, depth: Int): LoxValue =
     ancestor(depth).values(name.lexeme)
