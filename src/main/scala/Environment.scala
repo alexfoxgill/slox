@@ -45,3 +45,5 @@ class Environment(enclosing: Option[Environment] = None):
 
   def get(name: Token, depth: Int): LoxValue =
     ancestor(depth).values(name.lexeme)
+
+  def createChild(): Environment = new Environment(Some(this))

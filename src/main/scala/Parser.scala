@@ -216,6 +216,7 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
     if matches(False) then Expr.Literal(LoxWrapper(false))
     else if matches(True) then Expr.Literal(LoxWrapper(true))
     else if matches(Nil) then Expr.Literal(LoxNil)
+    else if matches(This) then Expr.This(Expr.Id.generate(), previous)
     else if matches(Number, String) then
       Expr.Literal(LoxWrapper(previous.getValue))
     else if matches(LeftParen) then

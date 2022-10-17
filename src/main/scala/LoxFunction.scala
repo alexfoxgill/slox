@@ -12,5 +12,11 @@ class LoxFunction(declaration: Stmt.Function, parentEnv: Environment)
     catch case Return(value) => value
   }
   def arity = declaration.params.length
+
   override def toString =
     s"<fn ${declaration.name.lexeme}>"
+
+  def bind(instance: LoxInstance) =
+    val env = parentEnv.createChild()
+    env.define("this", instance)
+    new LoxFunction(declaration, env)

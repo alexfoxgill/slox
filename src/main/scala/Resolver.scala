@@ -54,7 +54,10 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Stmt.Class(name, methods) =>
         declare(name)
         define(name)
-        methods.foreach(resolveFunction(_, FunctionType.Method))
+        inScope {
+          scopes.head += "this" -> IsReady.Yes
+          methods.foreach(resolveFunction(_, FunctionType.Method))
+        }
 
       case Stmt.Empty =>
         ()
@@ -90,6 +93,8 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Expr.Set(obj, name, value) =>
         resolve(obj)
         resolve(value)
+      case Expr.This(id, name) =>
+        resolveLocal(id, name)
       case Expr.Literal(_) => ()
 
   private def resolveFunction(

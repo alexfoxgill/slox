@@ -72,6 +72,7 @@ class Interpreter(lox: Lox):
       case Stmt.Class(name, methods) =>
         // null is ok here because we immediately assign (we define before creation so it can refer to iteslf)
         environment.define(name.lexeme, null)
+        environment.define("this", null)
         val clas = new LoxClass(
           name.lexeme,
           methods
@@ -168,6 +169,17 @@ class Interpreter(lox: Lox):
             v
           case _ =>
             throw new RuntimeError(name, "Only instances have properties")
+
+      case Expr.This(id, name) =>
+        locals
+          .get(id)
+          .map(depth => environment.get(name, depth))
+          .getOrElse {
+            throw new RuntimeError(
+              name,
+              "Cannot use 'this' outside class scope"
+            )
+          }
 
   private def stringify(value: LoxValue): String =
     value match

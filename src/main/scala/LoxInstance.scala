@@ -8,7 +8,7 @@ class LoxInstance(clas: LoxClass) extends LoxRoot:
   def get(name: Token): LoxValue =
     fields
       .get(name.lexeme)
-      .orElse(clas.findMethod(name.lexeme))
+      .orElse(clas.findMethod(name.lexeme).map(_.bind(this)))
       .getOrElse {
         throw new RuntimeError(
           name,

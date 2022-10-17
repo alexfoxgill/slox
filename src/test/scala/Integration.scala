@@ -174,4 +174,20 @@ object IntegrationTests extends TestSuite:
 
       eval(input, "Woof!")
     }
+
+    test("Class this") {
+      val input =
+        """
+        class Dog {
+          bark() {
+            print this.name + " says Woof!";
+          }
+        }
+        var basil = Dog();
+        basil.name = "Basil";
+        basil.bark();
+        """
+
+      eval(input, "Basil says Woof!")
+    }
   }
