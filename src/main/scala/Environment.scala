@@ -7,7 +7,7 @@ class Environment(enclosing: Option[Environment] = None):
     values += (name -> value)
     this
 
-  def assign(name: Token, value: LoxValue): Unit =
+  def assign(name: Token, value: LoxValue): Environment =
     if values.contains(name.lexeme) then values += (name.lexeme -> value)
     else
       enclosing match
@@ -17,9 +17,11 @@ class Environment(enclosing: Option[Environment] = None):
             name,
             s"Cannot assign to undefined variable '${name.lexeme}'"
           )
+    this
 
-  def assign(name: Token, value: LoxValue, depth: Int): Unit =
+  def assign(name: Token, value: LoxValue, depth: Int): Environment =
     ancestor(depth).values += (name.lexeme -> value)
+    this
 
   def get(name: Token): LoxValue =
     values

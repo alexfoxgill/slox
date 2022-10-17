@@ -70,6 +70,7 @@ class Interpreter(lox: Lox):
         throw new Return(evaluate(value))
 
       case Stmt.Class(name, methods) =>
+        // null is ok here because we immediately assign (we define before creation so it can refer to iteslf)
         environment.define(name.lexeme, null)
         val clas = new LoxClass(name.lexeme)
         environment.assign(name, clas)
