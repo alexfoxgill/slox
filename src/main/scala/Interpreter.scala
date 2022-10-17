@@ -72,7 +72,12 @@ class Interpreter(lox: Lox):
       case Stmt.Class(name, methods) =>
         // null is ok here because we immediately assign (we define before creation so it can refer to iteslf)
         environment.define(name.lexeme, null)
-        val clas = new LoxClass(name.lexeme)
+        val clas = new LoxClass(
+          name.lexeme,
+          methods
+            .map(m => m.name.lexeme -> new LoxFunction(m, environment))
+            .toMap
+        )
         environment.assign(name, clas)
 
   private def evaluate(expr: Expr): LoxValue =
@@ -135,10 +140,9 @@ class Interpreter(lox: Lox):
 
       case Expr.Call(callee, args, closingParen) =>
         val c = evaluate(callee)
-        val a = args.map(evaluate)
         c match
           case c: LoxCallable =>
-            if c.arity == args.length then c.call(this, a)
+            if c.arity == args.length then c.call(this, args.map(evaluate))
             else
               throw new RuntimeError(
                 closingParen,

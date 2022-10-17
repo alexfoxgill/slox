@@ -159,4 +159,19 @@ object IntegrationTests extends TestSuite:
 
       eval(input, "basil")
     }
+
+    test("Class methods") {
+      val input =
+        """
+        class Dog {
+          bark() {
+            print "Woof!";
+          }
+        }
+        var basil = Dog();
+        basil.bark();
+        """
+
+      eval(input, "Woof!")
+    }
   }

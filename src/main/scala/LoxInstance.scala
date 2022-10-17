@@ -8,8 +8,12 @@ class LoxInstance(clas: LoxClass) extends LoxRoot:
   def get(name: Token): LoxValue =
     fields
       .get(name.lexeme)
+      .orElse(clas.findMethod(name.lexeme))
       .getOrElse {
-        throw new RuntimeError(name, s"Undefined property '${name.lexeme}'")
+        throw new RuntimeError(
+          name,
+          s"Undefined property on $clas: '${name.lexeme}'"
+        )
       }
 
   def set(name: Token, value: LoxValue): Unit =
