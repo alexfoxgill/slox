@@ -7,9 +7,26 @@ enum IsReady:
 enum FunctionType:
   case None, Function, Method
 
+enum ClassType:
+  case None, Class
+
+class StateStack[A](base: A):
+  private var current = base
+
+  def get: A = current
+
+  def push[B](next: A)(block: => B): B =
+    val prev = current
+    current = next
+    try
+      block
+    finally
+      current = prev
+
 class Resolver(lox: Lox, interpreter: Interpreter):
   private val scopes = Stack.empty[HashMap[String, IsReady]]
-  private var currentFunction = FunctionType.None
+  private val functionStack = StateStack(FunctionType.None)
+  private val classStack = StateStack(ClassType.None)
 
   def resolve(statements: List[Stmt]): Unit =
     statements.foreach(resolve)
@@ -40,7 +57,7 @@ class Resolver(lox: Lox, interpreter: Interpreter):
         resolve(expr)
 
       case Stmt.Return(keyword, value) =>
-        if currentFunction == FunctionType.None then
+        if functionStack.get == FunctionType.None then
           lox.error(keyword, "Can't return from top-level code")
         resolve(value)
 
@@ -54,9 +71,11 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Stmt.Class(name, methods) =>
         declare(name)
         define(name)
-        inScope {
-          scopes.head += "this" -> IsReady.Yes
-          methods.foreach(resolveFunction(_, FunctionType.Method))
+        classStack.push(ClassType.Class) {
+          inScope {
+            scopes.head += "this" -> IsReady.Yes
+            methods.foreach(resolveFunction(_, FunctionType.Method))
+          }
         }
 
       case Stmt.Empty =>
@@ -94,6 +113,8 @@ class Resolver(lox: Lox, interpreter: Interpreter):
         resolve(obj)
         resolve(value)
       case Expr.This(id, name) =>
+        if classStack.get == ClassType.None then
+          lox.error(name, "Can't use 'this' outside class")
         resolveLocal(id, name)
       case Expr.Literal(_) => ()
 
@@ -101,9 +122,7 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       function: Stmt.Function,
       functionType: FunctionType
   ) =
-    var prevFunction = currentFunction
-    try
-      currentFunction = functionType
+    functionStack.push(functionType) {
       inScope {
         function.params.foreach { p =>
           declare(p)
@@ -111,7 +130,7 @@ class Resolver(lox: Lox, interpreter: Interpreter):
         }
         resolve(function.body)
       }
-    finally currentFunction = prevFunction
+    }
 
   private def resolveLocal(id: Expr.Id, name: Token) =
     val depth = scopes
