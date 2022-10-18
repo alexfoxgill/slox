@@ -208,4 +208,23 @@ object IntegrationTests extends TestSuite:
 
       eval(input, "Basil says Woof!")
     }
+
+    test("Class this binding") {
+      val input =
+        """
+        class Dog {
+          init(name) {
+            this.name = name;
+          }
+          bark() {
+            print this.name + " says Woof!";
+          }
+        }
+        var basil = Dog("Basil");
+        var woof = basil.bark;
+        woof();
+        """
+
+      eval(input, "Basil says Woof!")
+    }
   }
