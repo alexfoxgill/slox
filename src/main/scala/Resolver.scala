@@ -69,9 +69,14 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Stmt.Expression(expr) =>
         resolve(expr)
 
-      case Stmt.Class(name, methods) =>
+      case Stmt.Class(name, superclass, methods) =>
         declare(name)
         define(name)
+        superclass.foreach { s =>
+          if name.lexeme == s.name.lexeme then
+            lox.error(s.name, "A class can't inherit from itself")
+          resolve(s)
+        }
         classStack.push(ClassType.Class) {
           inScope {
             scopes.head += "this" -> IsReady.Yes

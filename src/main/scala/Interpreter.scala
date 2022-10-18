@@ -72,12 +72,24 @@ class Interpreter(lox: Lox):
       case Stmt.Return(keyword, value) =>
         throw new Return(value.map(evaluate).getOrElse(LoxNil))
 
-      case Stmt.Class(name, methods) =>
+      case Stmt.Class(name, superclassVar, methods) =>
         // null is ok here because we immediately assign (we define before creation so it can refer to iteslf)
         environment.define(name.lexeme, null)
         environment.define("this", null)
+
+        val superclass = superclassVar.map { sc =>
+          evaluate(sc) match
+            case c: LoxClass => c
+            case _ =>
+              throw new RuntimeError(
+                sc.name,
+                "Superclass must be a class"
+              )
+        }
+
         val clas = new LoxClass(
           name.lexeme,
+          superclass,
           methods.map { m =>
             val methodType = FunctionType.fromMethodName(m.name.lexeme)
             m.name.lexeme -> new LoxFunction(m, environment, methodType)

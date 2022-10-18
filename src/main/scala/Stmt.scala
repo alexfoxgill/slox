@@ -8,7 +8,7 @@ enum Stmt:
   case While(condition: Expr, body: Stmt)
   case Function(name: Token, params: List[Token], body: List[Stmt])
   case Return(keyword: Token, value: Option[Expr])
-  case Class(name: Token, methods: List[Function])
+  case Class(name: Token, superclass: Option[Expr.Var], methods: List[Function])
 
 object Stmt:
   def block(statements: Stmt*): Block = new Block(statements.toList)

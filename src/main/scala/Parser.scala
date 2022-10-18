@@ -23,13 +23,22 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
 
   private def classDeclaration(): Stmt =
     val name = consume(Identifier, "Expected class name")
+
+    val superclass =
+      if matches(Less) then
+        Some[Expr.Var](
+          Expr
+            .Var(Expr.Id.generate(), consume(Identifier, "Expected superclass"))
+        )
+      else None
+
     consume(LeftBrace, "Expected '{' before class body")
 
     val methods = ArrayBuffer.empty[Stmt.Function]
     while !check(RightBrace) && !isAtEnd do methods += function("method")
 
     consume(RightBrace, "Expected '}' after class body")
-    Stmt.Class(name, methods.toList)
+    Stmt.Class(name, superclass, methods.toList)
 
   private def function(kind: String): Stmt.Function =
     val name = consume(Identifier, s"Expected $kind name")
