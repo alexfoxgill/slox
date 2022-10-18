@@ -4,9 +4,13 @@ class LoxClass(name: String, methods: Map[String, LoxFunction])
   override def toString: String = name
 
   def call(interpreter: Interpreter, arguments: List[LoxValue]): LoxValue =
-    new LoxInstance(this)
+    val instance = new LoxInstance(this)
+    init.foreach(_.bind(instance).call(interpreter, arguments))
+    instance
 
-  def arity: Int = 0
+  def arity: Int = init.fold(0)(_.arity)
 
   def findMethod(name: String): Option[LoxFunction] =
     methods.get(name)
+
+  private def init = findMethod("init")

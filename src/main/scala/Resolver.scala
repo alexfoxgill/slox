@@ -4,9 +4,6 @@ import scala.collection.mutable.Stack
 enum IsReady:
   case Yes, No
 
-enum FunctionType:
-  case None, Function, Method
-
 enum ClassType:
   case None, Class
 
@@ -57,9 +54,13 @@ class Resolver(lox: Lox, interpreter: Interpreter):
         resolve(expr)
 
       case Stmt.Return(keyword, value) =>
-        if functionStack.get == FunctionType.None then
-          lox.error(keyword, "Can't return from top-level code")
-        resolve(value)
+        functionStack.get match
+          case FunctionType.None =>
+            lox.error(keyword, "Can't return from top-level code")
+          case FunctionType.Init if value.isDefined =>
+            lox.error(keyword, "Can't return a value from an initializer")
+          case _ => ()
+        value.foreach(resolve)
 
       case Stmt.While(condition, body) =>
         resolve(condition)
@@ -74,7 +75,10 @@ class Resolver(lox: Lox, interpreter: Interpreter):
         classStack.push(ClassType.Class) {
           inScope {
             scopes.head += "this" -> IsReady.Yes
-            methods.foreach(resolveFunction(_, FunctionType.Method))
+            methods.foreach { m =>
+              val functionType = FunctionType.fromMethodName(m.name.lexeme)
+              resolveFunction(m, functionType)
+            }
           }
         }
 

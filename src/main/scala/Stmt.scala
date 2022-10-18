@@ -7,7 +7,7 @@ enum Stmt:
   case If(condition: Expr, thenBranch: Stmt, elseBranch: Option[Stmt])
   case While(condition: Expr, body: Stmt)
   case Function(name: Token, params: List[Token], body: List[Stmt])
-  case Return(keyword: Token, value: Expr)
+  case Return(keyword: Token, value: Option[Expr])
   case Class(name: Token, methods: List[Function])
 
 object Stmt:

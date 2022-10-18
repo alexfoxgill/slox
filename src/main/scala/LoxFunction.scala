@@ -1,15 +1,22 @@
-class LoxFunction(declaration: Stmt.Function, parentEnv: Environment)
-    extends LoxRoot
+class LoxFunction(
+    declaration: Stmt.Function,
+    closure: Environment,
+    functionType: FunctionType
+) extends LoxRoot
     with LoxCallable:
   def call(interpreter: Interpreter, arguments: List[LoxValue]): LoxValue = {
-    val env = new Environment(Some(parentEnv))
+    val env = new Environment(Some(closure))
     declaration.params.zip(arguments).foreach { (name, value) =>
       env.define(name.lexeme, value)
     }
     try
       interpreter.execute(declaration.body, env)
-      LoxNil
-    catch case Return(value) => value
+      if functionType == FunctionType.Init then getThis
+      else LoxNil
+    catch
+      case Return(value) =>
+        if functionType == FunctionType.Init then getThis
+        else value
   }
   def arity = declaration.params.length
 
@@ -17,6 +24,8 @@ class LoxFunction(declaration: Stmt.Function, parentEnv: Environment)
     s"<fn ${declaration.name.lexeme}>"
 
   def bind(instance: LoxInstance) =
-    val env = parentEnv.createChild()
+    val env = closure.createChild()
     env.define("this", instance)
-    new LoxFunction(declaration, env)
+    new LoxFunction(declaration, env, functionType)
+
+  private def getThis = closure.get("this", 0)

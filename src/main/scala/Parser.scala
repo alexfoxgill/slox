@@ -63,7 +63,7 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
 
   private def returnStatement(): Stmt =
     val keyword = previous
-    val res = if !check(Semicolon) then expression() else Expr.Literal(LoxNil)
+    val res = if !check(Semicolon) then Some(expression()) else None
     consume(Semicolon, "Expected ';' after return value")
     Stmt.Return(keyword, res)
 

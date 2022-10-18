@@ -64,10 +64,13 @@ class Interpreter(lox: Lox):
         while isTruthy(evaluate(condition)) do execute(body)
 
       case f @ Stmt.Function(name, params, body) =>
-        environment.define(name.lexeme, new LoxFunction(f, environment))
+        environment.define(
+          name.lexeme,
+          new LoxFunction(f, environment, FunctionType.Function)
+        )
 
       case Stmt.Return(keyword, value) =>
-        throw new Return(evaluate(value))
+        throw new Return(value.map(evaluate).getOrElse(LoxNil))
 
       case Stmt.Class(name, methods) =>
         // null is ok here because we immediately assign (we define before creation so it can refer to iteslf)
@@ -75,9 +78,10 @@ class Interpreter(lox: Lox):
         environment.define("this", null)
         val clas = new LoxClass(
           name.lexeme,
-          methods
-            .map(m => m.name.lexeme -> new LoxFunction(m, environment))
-            .toMap
+          methods.map { m =>
+            val methodType = FunctionType.fromMethodName(m.name.lexeme)
+            m.name.lexeme -> new LoxFunction(m, environment, methodType)
+          }.toMap
         )
         environment.assign(name, clas)
 
