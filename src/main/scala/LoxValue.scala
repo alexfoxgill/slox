@@ -1,5 +1,5 @@
 // A LoxValue is anything that can be referenced in a Lox program
-type LoxValue = LoxPrimitive | LoxWrapper[Any] | LoxRoot
+type LoxValue = LoxWrapper[Any] | LoxRoot
 
 // Opaque wrapper around non-Lox values
 opaque type LoxWrapper[A] = A
