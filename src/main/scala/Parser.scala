@@ -226,6 +226,11 @@ class Parser(lox: Lox, tokens: IndexedSeq[Token]) {
     else if matches(True) then Expr.Literal(LoxWrapper(true))
     else if matches(Nil) then Expr.Literal(LoxNil)
     else if matches(This) then Expr.This(Expr.Id.generate(), previous)
+    else if matches(Super) then
+      val token = previous
+      consume(Dot, "Expected dot after 'super'")
+      val method = consume(Identifier, "Expected superclass method name")
+      Expr.Super(Expr.Id.generate(), token, method)
     else if matches(Number, String) then
       Expr.Literal(LoxWrapper(previous.getValue))
     else if matches(LeftParen) then

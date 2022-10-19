@@ -73,9 +73,8 @@ class Interpreter(lox: Lox):
         throw new Return(value.map(evaluate).getOrElse(LoxNil))
 
       case Stmt.Class(name, superclassVar, methods) =>
-        // null is ok here because we immediately assign (we define before creation so it can refer to iteslf)
+        // null is ok here because we immediately assign (we define before creation so it can refer to itself)
         environment.define(name.lexeme, null)
-        environment.define("this", null)
 
         val superclass = superclassVar.map { sc =>
           evaluate(sc) match
@@ -87,12 +86,19 @@ class Interpreter(lox: Lox):
               )
         }
 
+        val classEnv = superclass.fold(environment) { sc =>
+          environment.createChild()
+          environment.define("super", sc)
+        }
+
+        classEnv.define("this", null)
+
         val clas = new LoxClass(
           name.lexeme,
           superclass,
           methods.map { m =>
             val methodType = FunctionType.fromMethodName(m.name.lexeme)
-            m.name.lexeme -> new LoxFunction(m, environment, methodType)
+            m.name.lexeme -> new LoxFunction(m, classEnv, methodType)
           }.toMap
         )
         environment.assign(name, clas)
@@ -187,15 +193,33 @@ class Interpreter(lox: Lox):
             throw new RuntimeError(name, "Only instances have properties")
 
       case Expr.This(id, name) =>
-        locals
-          .get(id)
-          .map(depth => environment.get(name, depth))
-          .getOrElse {
-            throw new RuntimeError(
-              name,
-              "Cannot use 'this' outside class scope"
-            )
-          }
+        val depth = locals.get(id).getOrElse {
+          throw new RuntimeError(name, "Cannot use 'this' outside class scope")
+        }
+        environment.get(name, depth)
+
+      case Expr.Super(id, name, methodName) =>
+        val depth = locals.get(id).getOrElse {
+          throw new RuntimeError(
+            name,
+            "Cannot user 'super' outside class scope"
+          )
+        }
+        val superclass = environment.get(name, depth) match
+          case c: LoxClass => c
+          case _ =>
+            throw new RuntimeError(name, "Expected 'super' to be a class")
+        val instance = environment.get("this", depth - 1) match
+          case i: LoxInstance => i
+          case _ =>
+            throw new RuntimeError(name, "Could not find 'this' instance")
+        val method = superclass.findMethod(methodName.lexeme).getOrElse {
+          throw new RuntimeError(
+            methodName,
+            s"Undefined superclass method '${methodName.lexeme}'"
+          )
+        }
+        method.bind(instance)
 
   private def stringify(value: LoxValue): String =
     value match

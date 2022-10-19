@@ -5,7 +5,7 @@ enum IsReady:
   case Yes, No
 
 enum ClassType:
-  case None, Class
+  case None, Class, Subclass
 
 class StateStack[A](base: A):
   private var current = base
@@ -77,14 +77,26 @@ class Resolver(lox: Lox, interpreter: Interpreter):
             lox.error(s.name, "A class can't inherit from itself")
           resolve(s)
         }
-        classStack.push(ClassType.Class) {
-          inScope {
-            scopes.head += "this" -> IsReady.Yes
-            methods.foreach { m =>
-              val functionType = FunctionType.fromMethodName(m.name.lexeme)
-              resolveFunction(m, functionType)
+        val classType =
+          if superclass.isDefined then ClassType.Subclass else ClassType.Class
+        classStack.push(classType) {
+          def classResolution() =
+            inScope {
+              scopes.head += "this" -> IsReady.Yes
+              methods.foreach { m =>
+                val functionType = FunctionType.fromMethodName(m.name.lexeme)
+                resolveFunction(m, functionType)
+              }
             }
-          }
+
+          superclass match
+            case Some(_) =>
+              inScope {
+                scopes.head += "super" -> IsReady.Yes
+                classResolution()
+              }
+            case None =>
+              classResolution()
         }
 
       case Stmt.Empty =>
@@ -124,6 +136,14 @@ class Resolver(lox: Lox, interpreter: Interpreter):
       case Expr.This(id, name) =>
         if classStack.get == ClassType.None then
           lox.error(name, "Can't use 'this' outside class")
+        resolveLocal(id, name)
+      case Expr.Super(id, name, method) =>
+        classStack.get match
+          case ClassType.None =>
+            lox.error(name, "Can't use 'super' outside class")
+          case ClassType.Class =>
+            lox.error(name, "Can't use 'super' in class with no superclass")
+          case ClassType.Subclass => ()
         resolveLocal(id, name)
       case Expr.Literal(_) => ()
 

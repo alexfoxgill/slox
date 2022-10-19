@@ -10,6 +10,7 @@ enum Expr:
   case Get(obj: Expr, name: Token)
   case Set(obj: Expr, name: Token, value: Expr)
   case This(id: Expr.Id, name: Token)
+  case Super(id: Expr.Id, name: Token, method: Token)
 
 object Expr:
   opaque type Id = Int
